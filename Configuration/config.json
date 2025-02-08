@@ -1,0 +1,16 @@
+{
+  "dbfile": "../../DataSets/Example/stamping_workshop.db",
+  "Decisionlayer": {
+    "id": 1
+  },
+  "ModelLayer": {
+    "id": 1
+  },
+  "Optimizerlayer": {
+    "Solver": 1,
+    "Parameter": {}
+  },
+  "DataLayer": {
+    "id": 1
+  }
+}
