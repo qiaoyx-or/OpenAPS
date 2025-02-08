@@ -1,0 +1,6 @@
+[submodule "OptimizationCalculusKernel"]
+	path = OptimizationCalculusKernel
+	url = git@jihulab.com:openor/OptimizationCalculusKernel.git
+[submodule "pyarmor_runtime_005890"]
+	path = pyarmor_runtime_005890
+	url = git@jihulab.com:openor/pyarmor_runtime_005890.git
