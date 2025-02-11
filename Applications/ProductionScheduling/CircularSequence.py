@@ -193,16 +193,21 @@ class CircularSequenceSchedulingSolver:
         df = pd.DataFrame(flag.astype(int), columns=obj.codes)
 
         seq = np.zeros((data.shape[0],), dtype=int)
-        result = self.engine.demand.data.copy()
+        __result = self.engine.demand.data.copy()
+
         for i in range(data.shape[0]):
             seq[i] = np.dot(flag[i,:], obj.codes)
-            result.loc[i] = self.engine.demand.data[
+            if seq[i] == 0:
+                seq[i] = obj.codes[-1]
+            __result.loc[i,:] = self.engine.demand.data[
                 self.engine.demand.data.type == seq[i]
             ].values[0]
-        result['number'] = [np.sum(data[k,:]) for k in range(data.shape[0])]
+        __result['number'] = [
+            np.sum(data[k,:]) for k in range(data.shape[0])
+        ]
 
         slices = []
-        df, cyc_len = result[['same']], obj.cyc_len
+        df, cyc_len = __result[['same']], obj.cyc_len
 
         if self.engine.capacity is not None:
             conf = pd.DataFrame(
@@ -229,7 +234,7 @@ class CircularSequenceSchedulingSolver:
         from pandasgui import show
         show(
             all=all.T.astype(int),
-            origin=result
+            origin=__result
         )
 
     def display_with_style(
@@ -309,18 +314,6 @@ def main(argv) -> None:
         values=sorted(set(data['same'][:-1]))
     )
 
-    # from pyarmor_runtime_005890 import __pyarmor__
-    # print(str(__pyarmor__(1, None, b'hdinfo', 1)))
-    # print('bind data is', __pyarmor__(0, None, b'keyinfo', 1))
-    # import time
-    # print(
-    #     'expired epoch is',
-    #     time.strftime(
-    #         "%Y-%m-%d %H:%M:%S",
-    #         time.localtime(__pyarmor__(1, None, b'keyinfo', 1))
-    #     )
-    # )
-
     # 目标函数中的各权重为配置项
     solver.engine.create_objective(
         {
@@ -328,6 +321,7 @@ def main(argv) -> None:
             'color_changeover': 0
         }
     )
+
     result = solver.engine.run(config=config)
 
     times = 1
