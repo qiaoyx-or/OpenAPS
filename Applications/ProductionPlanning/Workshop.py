@@ -79,6 +79,21 @@ class WorkshopSolver:
                 session.add(record)
             session.commit()
 
+    def run(self):
+        print('--------------------------------------------------')
+        self.engine.run()
+        data = self.engine.business.data.get_result(
+            self.engine.business.scene.code
+        )
+
+        if data is not None:
+            return pd.DataFrame(
+                data.astype(int),
+                columns=self.engine.business.scene.form.codes
+            )
+
+        return None
+
     def display_result(self, *, mode: int=0) -> None:
         data = self.engine.business.data.get_result(
             self.engine.business.scene.code
@@ -135,6 +150,30 @@ def read_config(file: str='conf.ini') -> dict:
     cfg = ConfigParser()
     cfg.read(file)
     return dict(cfg.items())
+
+def get_solver() -> WorkshopSolver:
+    import pathlib
+
+    solver = WorkshopSolver()
+
+    folder = pathlib.Path(__file__).parent.resolve()
+    config = read_config(f'{folder}/conf.ini')
+    database = f'{folder}/{config['dbfile']['file']}'
+
+    units, order, craft = import_base_data(database)
+    records = import_planning_result(database)
+    material, ingredient, kitting = import_kitting_information(database)
+
+    solver.create_calendar(units)
+    solver.create_engine(order, craft)
+
+    solver.engine.setup()
+    solver.engine.create_capacity_constraints()
+    solver.engine.create_demand_constraints(mode=3)
+    solver.engine.create_inventory_constraints()
+    solver.create_kitting_condition(material, ingredient, kitting)
+
+    return solver
 
 def main(argv) -> None:
     solver = WorkshopSolver()

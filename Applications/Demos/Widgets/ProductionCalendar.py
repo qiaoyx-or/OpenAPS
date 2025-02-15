@@ -3,20 +3,20 @@ from __future__ import annotations
 from PySide6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
-    QPoint, QRect, QSize,
-    QObject, Signal, Slot,
-    Qt, QEvent
+    QPoint,
+    QRect,
+    QSize,
+    QObject,
+    Signal,
+    Slot,
+    QEvent,
+    Qt
 )
 
 from PySide6.QtWidgets import (
-    QMainWindow,
     QLineEdit,
-    QPushButton,
-    QTextEdit,
-    QVBoxLayout,
     QWidget,
     QTableView,
-    QApplication,
     QHeaderView,
     QToolTip,
     QMenu
@@ -26,15 +26,13 @@ from PySide6.QtGui import (
     QMouseEvent, QColor, QPainter, QCursor, QAction
 )
 
-from qt_material import apply_stylesheet, list_themes
-
 import sys, os
 sys.path.append(
     os.path.dirname(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     )
 )
-from Interface.Interface import TimeLineUnit
+# from Interface.Interface import TimeLineUnit
 
 
 class MultiHeaderView(QHeaderView):
@@ -233,66 +231,13 @@ class CalendarView(QTableView):
     # def hoverLeaverEvent(self, e):
     #     print('outside')
 
-    def eventFilter(self, o: QObject, e: QEvent) -> bool:
-        if o == self:
-            if e.type() == QEvent.Enter:
-                print(f'*************** {e.type()}')
-                return True
-            elif e.type() == QEvent.HoverLeave:
-                print(f'^^^^^^^^^^^^^^^ {e.type()}')
-                return True
-            else:
-                print(f'############### {e.type()}')
-        else:
-            print('.................')
+    # def eventFilter(self, o: QObject, e: QEvent) -> bool:
+    #     if o == self:
+    #         if e.type() == QEvent.Enter:
+    #             return True
+    #         elif e.type() == QEvent.HoverLeave:
+    #             return True
+    #         else:
+    #     else:
 
-        return super().eventFilter(o, e)
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-
-    window = QMainWindow()
-    window.setWindowTitle("OpenAPS")
-    # window.setToolTip('Tip Info 这是按钮的提示信息')
-    layout = QVBoxLayout()
-
-    window.resize(800, 600)
-
-    # setup stylesheet
-    apply_stylesheet(app, theme='dark_teal.xml')
-    # apply_stylesheet(app, theme='dark_cyan.xml')
-    # print(list_themes())
-
-    days = 10
-    model = CalendarModel(days=days)
-    view = CalendarView(window)
-    view.setModel(model)
-    layout.addWidget(view)
-    # view.resizeColumnsToContents()
-    # view.resizeRowsToContents()
-    # view.resize(800, 600)
-    view.clearSpans()
-
-    # hheader = view.horizontalHeader()
-    # for i in range(hheader.count()):
-    #     key = hheader.model().headerData(
-    #         i, Qt.Horizontal, Qt.ItemDataRole.DisplayRole
-    #     )
-    #     toolTip = str(key)
-    #     view.horizontalHeaderItem(i).setToolTip(toolTip)
-
-    # selected_indexes = view.selectionModel().selectedIndexes()
-    # selected_rows = set(index.row() for index in selected_indexes)
-    # for row_index in selected_rows:
-    #     print('Row:', row_index + 1)
-    #     for column_index in range(model.columnCount()):
-    #         item = model.item(row_index, column_index)
-    #         print('Column:', column_index + 1, 'Value:', item.text())
-    # print('----------------------')
-
-    window.setLayout(layout)
-    window.setCentralWidget(view)
-    window.show()
-
-    sys.exit(app.exec())
+    #     return super().eventFilter(o, e)
