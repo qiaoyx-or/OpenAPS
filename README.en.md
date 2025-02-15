@@ -1,7 +1,7 @@
 
 ![PlanningSystem](Docs/images/planning_system.png)
 
-# zh_CN [简体中文](README.zh_CN.md)
+# zh_CN [简体中文](README.md)
 
 # What's APS
 APS (Advanced Planning and Scheduling) is a system used to optimize and manage complex operational processes in manufacturing, logistics, and other industries. It aims to generate efficient, feasible plans and schedules by considering multiple factors and constraints, thereby improving operational efficiency and resource utilization.
