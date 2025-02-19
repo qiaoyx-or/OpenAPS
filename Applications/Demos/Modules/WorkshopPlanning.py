@@ -1,17 +1,16 @@
 
 from __future__ import annotations
-
 from PySide6.QtCore import (
     QObject, QThread,
     Signal,
-    Slot,
-    # Qt
+    Slot
 )
 from PySide6.QtWidgets import (
     QWidget,
     QFrame,
     # QStackedLayout,
-    QVBoxLayout, QHBoxLayout,
+    QVBoxLayout,
+    QHBoxLayout,
     QTableView,
     QTabWidget,
     # QButtonGroup,
@@ -36,11 +35,11 @@ sys.path.append(
         )
     )
 )
-from ProductionPlanning.Workshop import WorkshopSolver, get_solver
+from ProductionPlanning.Workshop import WorkshopSolver, create_solver
 
 
 class SolveWorker(QObject):
-    update_signal = Signal(pd.DataFrame)    # 用于返回结果
+    update_signal = Signal()
     finish_signal = Signal()
 
     def __init__(self, obj: WorkshopSolver) -> None:
@@ -54,9 +53,9 @@ class SolveWorker(QObject):
             return
 
         self.isRunning = True
-        ret = self.obj.run()
+        self.obj.run()
 
-        self.update_signal.emit(ret)
+        self.update_signal.emit()
         self.finish_signal.emit()
         self.isRunning = False
 
@@ -129,14 +128,19 @@ class WorkshopPlanning(QWidget):
 
     @staticmethod
     def create():
-        solver = get_solver()
+        solver = create_solver()
         worker = SolveWorker(solver)
         return WorkshopPlanning(worker)
 
     @Slot(pd.DataFrame)
-    def on_update(self, df: pd.DataFrame) -> None:
-        model = PandasModel(df)
-        self.result_view.setModel(model)
+    def on_update(self) -> None:
+        import glob
+        filename = 'workcenter' + '*.csv'
+        for file in glob.glob(f'./{filename}'):
+            print(file)
+            df = pd.read_csv(file)
+            model = PandasModel(df)
+            self.result_view.setModel(model)
 
     @Slot()
     def on_finish(self) -> None:
@@ -169,7 +173,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     apply_stylesheet(app, theme='dark_teal.xml')
 
-    solver = get_solver()
+    solver = create_solver()
     worker = SolveWorker(solver)
     page = WorkshopPlanning(worker)
     window = QMainWindow()

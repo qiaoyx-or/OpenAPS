@@ -6,7 +6,7 @@
 from datetime import datetime
 from typing import Optional
 from sqlalchemy import (
-    func,
+    # func,
     Identity,
     ForeignKey,
     Integer,
@@ -18,9 +18,9 @@ from sqlalchemy.orm import (
     Mapped,
     mapped_column,
     registry,
-    relationship,
-    DeclarativeBase,
-    MappedAsDataclass
+    # relationship,
+    # DeclarativeBase,
+    # MappedAsDataclass
 )
 
 
@@ -490,7 +490,7 @@ class CraftRouteItem:
 @reg.mapped_as_dataclass(unsafe_hash=True)
 class WorkCenterOrg_Group:
     """ 产能组织结构.集团 """
-    
+
     __tablename__ = "workcenter_org_group"
 
     id: Mapped[int] = mapped_column(

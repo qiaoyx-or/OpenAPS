@@ -3,7 +3,10 @@ import numpy as np
 import dataclasses
 
 from typing import List, Optional
-from abc import ABC, abstractmethod
+from abc import (
+    ABC,
+    # abstractmethod
+)
 
 import datetime
 
@@ -107,7 +110,7 @@ class IDemand(ABC):
         _props = []
         if properties is not None:
             for p in self.data.columns:
-                if p == number_field:
+                if p == self.number_field:
                     continue
 
                 # _props中的元素需要保持在data.columns中的顺序

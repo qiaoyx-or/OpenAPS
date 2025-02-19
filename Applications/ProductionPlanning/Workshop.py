@@ -1,10 +1,6 @@
 from absl import app
 
 import pandas as pd
-import numpy as np
-import json
-
-from pathlib import Path
 import sys, os
 sys.path.append(
     os.path.dirname(
@@ -12,14 +8,25 @@ sys.path.append(
     )
 )
 
-from Interface.Interface import *
-from Interface.ExportSqliteData import *
-import OptimizationCalculusKernel as gock
+from Interface.Interface import (
+    TimeLineUnit, TimeLine,
+    # IDemand,
+    # IDemandFixed,
+    IDemandTimed,
+    # ICapacity,
+    KittingProcess,
+    Preprocessing
+)
+from Interface.ImportSqliteData import (
+    import_base_data,
+    import_kitting_information,
+)
+import OptimizationCalculusKernel as GOCK
 
 
 class WorkshopSolver:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, config=None) -> None:
+        self.config = config
 
     def create_calendar(self, units) -> None:
         self.calendar = TimeLine([   # 模拟生产日历
@@ -38,38 +45,37 @@ class WorkshopSolver:
     ) -> None:
         process = Preprocessing(
             IDemandTimed(
-                order, self.calendar,
-                ['production'], 'production', 'number'),
-            craft,
-            ['line']            # 此处传入'line'，表示产能是以产线进行组织的
+                order, self.calendar, ['production'], 'production', 'number'
+            ), craft, ['line']
         )
         process.demand.fixed_batch_size = process.demand.snps() * 2**0
         process.demand.supplements += process.check_fixed_batch_size()
         process.demand.supplements += process.check_sync()
 
-        self.engine = gock.NormalWorkshopEngine(
+        self.engine = GOCK.NormalWorkshopEngine(
             process.demand,
             process.get_capacity_list(self.calendar)
         )
 
-    def create_kitting_condition(
-            self,
-            material, ingredient, kitting,
-    ) -> None:
-        matA, matB = KittingProcess.to_kitting_condition(
-            ingredient, kitting,
-            self.calendar,
-            self.engine.demand.production_ids,
-            list(material.id)
+    def export_csv(self) -> None:
+        import pathlib
+        folder = pathlib.Path(__file__).parent.resolve()
+        pd.DataFrame(self.engine.business.data.demand).to_csv(
+            f'{folder}/demand.csv'
         )
-
-        self.engine.create_kitting_constraints(matA, matB)
+        for k, v in self.engine.business.data.result.items():
+            pd.DataFrame(v).to_csv(
+                f'{folder}/workcenter_{k}.csv'
+            )
 
     def store_result(self, file: str, result) -> None:
         records = self.engine.get_result(result)
         if len(records) == 0:
             return
 
+        from sqlalchemy.orm import Session
+        from sqlalchemy import create_engine
+        from IDataBase import PlanningResult
         with Session(
                 create_engine(f'sqlite:///{file}?charset=utf8')
         ) as session:
@@ -79,18 +85,15 @@ class WorkshopSolver:
                 session.add(record)
             session.commit()
 
-    def run(self):
-        print('--------------------------------------------------')
-        self.engine.run()
-        data = self.engine.business.data.get_result(
-            self.engine.business.scene.code
-        )
+    def run(self) -> None:
+        solver_conf = dict(self.config['solver'])
+        for k, v in solver_conf.items():
+            solver_conf[k] = int(v)
+        self.engine.run(config=solver_conf)
 
-        if data is not None:
-            return pd.DataFrame(
-                data.astype(int),
-                columns=self.engine.business.scene.form.codes
-            )
+        pd.DataFrame(self.engine.business.data.demand).to_csv('demand.csv')
+        for k, v in self.engine.business.data.result.items():
+            pd.DataFrame(v).to_csv(f'workcenter_{k}.csv')
 
         return None
 
@@ -148,80 +151,83 @@ def read_config(file: str='conf.ini') -> dict:
     from configparser import ConfigParser
 
     cfg = ConfigParser()
-    cfg.read(file)
-    return dict(cfg.items())
+    cfg.read(file, encoding='utf-8')
+    return cfg
 
-def get_solver() -> WorkshopSolver:
+def create_solver() -> WorkshopSolver:
     import pathlib
-
-    solver = WorkshopSolver()
 
     folder = pathlib.Path(__file__).parent.resolve()
     config = read_config(f'{folder}/conf.ini')
+    solver = WorkshopSolver(config)
     database = f'{folder}/{config['dbfile']['file']}'
 
+    objective_weights = dict(config['objective'])
+    for k, v in objective_weights.items():
+        objective_weights[k] = float(v)
+
     units, order, craft = import_base_data(database)
-    records = import_planning_result(database)
+    # records = import_planning_result(database)
     material, ingredient, kitting = import_kitting_information(database)
 
+    # 必选项: 基础配置
     solver.create_calendar(units)
     solver.create_engine(order, craft)
-
     solver.engine.setup()
-    solver.engine.create_capacity_constraints()
-    solver.engine.create_demand_constraints(mode=3)
-    solver.engine.create_inventory_constraints()
-    solver.create_kitting_condition(material, ingredient, kitting)
+    matA, matB = KittingProcess.to_kitting_condition(
+        ingredient, kitting, solver.calendar,
+        solver.engine.demand.production_ids,
+        list(material.id)
+    )
+
+    # 配置约束条件
+    if config.getboolean('constraints', 'enable_capacity_cons'):
+        solver.engine.create_capacity_constraints()
+
+    if config.getboolean('constraints', 'enable_demand_cons'):
+        m = config.getint('constraints', 'demand_cons_mode')
+        if m is None:
+            solver.engine.create_demand_constraints()
+        else:
+            mode = int(m)       # 数值类型必须显式转换
+            solver.engine.create_demand_constraints(mode=mode)
+
+    if config.getboolean('constraints', 'enable_inventory_cons'):
+        solver.engine.create_inventory_constraints()
+
+    if config.getboolean('constraints', 'enable_kitting_cons'):
+        solver.engine.create_kitting_constraints(matA, matB)
+
+    # 配置目标函数
+    if not config.getboolean('constraints', 'CSP'):
+        objective_weights['waittime'] = 0
+        solver.engine.create_objective(objective_weights)
 
     return solver
 
 def main(argv) -> None:
-    solver = WorkshopSolver()
+    solver = create_solver()
 
-    config = read_config('conf.ini')
-    database = config['dbfile']['file']
+    solver_conf = dict(solver.config['solver'])
+    for k, v in solver_conf.items():
+        solver_conf[k] = int(v)
+    result = solver.engine.run(config=solver_conf)
+    solver.export_csv()
 
-    units, order, craft = import_base_data(database)
-    records = import_planning_result(database)
-    material, ingredient, kitting = import_kitting_information(database)
+    times = 0
+    objective_weights = dict(solver.config['objective'])
+    for k, v in objective_weights.items():
+        objective_weights[k] = float(v)
+    for i in range(times):      # 热启动连续解算
+        if not solver.config.getboolean('constraints', 'CSP'):
+            solver.engine.create_objective(objective_weights)
 
-    solver.create_calendar(units)
-    solver.create_engine(order, craft)
-
-    solver.engine.setup()
-    solver.engine.create_capacity_constraints()
-    solver.engine.create_demand_constraints(mode=3)
-    solver.engine.create_inventory_constraints()
-    solver.create_kitting_condition(material, ingredient, kitting)
-
-    # 目标函数中的各权重为配置项
-    solver.engine.create_objective(
-        {
-            'workload': -0,     # -号表示 maximize -> minimize 转换
-            'idletime':  0,
-            'job_bias': -1e-3,  # -0
-            'waittime':  0
-        }
-    )
-
-    result = solver.engine.run(config=dict(config['solver']))
-
-    times = 1
-    solver.engine.create_objective(
-        {
-            'workload': -0,     # -号表示 maximize -> minimize 转换
-            'idletime':  0,
-            'job_bias': -1e-3,  # -0
-            'waittime':  1
-        }
-    )
-    for i in range(times):
         result = solver.engine.run(
-            history=result,
-            config=dict(config['solver'])
+            history=result, config=solver_conf
         )
 
-    solver.display_result(mode=1)
+    # solver.display_result(mode=1)
+    solver.export_csv()
 
 
 if __name__ == '__main__':

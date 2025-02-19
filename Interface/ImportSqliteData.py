@@ -1,11 +1,30 @@
 import pandas as pd
 
-from sqlalchemy import select
+# from sqlalchemy import select
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from sqlalchemy.schema import CreateSchema
+# from sqlalchemy.schema import CreateSchema
 
-from .IDataBase import *
+import sys, os
+sys.path.append(
+    os.path.dirname(os.path.abspath(__file__))
+)
+from IDataBase import (
+    PlanningResult,
+    Material,
+    Ingredient,
+    KittingInformation,
+    TimeUnit,
+    # WorkCenterOrg_Line,
+    Property_1,
+    Property_2,
+    Production,
+    WorkCenterCraftRoute,
+    CraftRouteItem,
+    ProcessItem,
+    OrderInformation,
+    OrderItem
+)
 
 
 def import_planning_result(
@@ -40,7 +59,7 @@ def import_base_data(
         units = pd.DataFrame(session.query(TimeUnit))
 
         # 产线信息，生产序列生成的地方(生产序列的坐标系)
-        lines = pd.DataFrame(session.query(WorkCenterOrg_Line))
+        # lines = pd.DataFrame(session.query(WorkCenterOrg_Line))
 
         # 容器容量
         container_sizes = pd.DataFrame(session.query(Property_1))

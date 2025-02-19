@@ -3,7 +3,6 @@ from typing import List, Optional
 
 import pandas as pd
 import numpy as np
-import json
 
 import sys, os
 sys.path.append(
@@ -12,19 +11,17 @@ sys.path.append(
     )
 )
 
-import OptimizationCalculusKernel as gock
-from DataSets.Example import MultiPropertiesData as mpd
+import OptimizationCalculusKernel as GOCK
 from DataSets.Workshop import Workshop
 from Interface.Interface import (
     ICapacity, IDemandFixed
 )
-import datetime
 
 
 class CircularSequenceSchedulingSolver:
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, config=None) -> None:
+        self.config = config
 
     def import_result(
             self, file: str=''
@@ -258,7 +255,7 @@ class CircularSequenceSchedulingSolver:
             demand: IDemandFixed,
             capacity: Optional[List[ICapacity]]=None
     ) -> None:
-        self.engine = gock.CircularSequenceEngine(
+        self.engine = GOCK.CircularSequenceEngine(
             cyc_len=cyc_len,
             cyc_num=cyc_num,
             demand=demand,
@@ -270,22 +267,25 @@ def read_config(file: str='conf.ini') -> dict:
     from configparser import ConfigParser
 
     cfg = ConfigParser()
-    cfg.read(file)
-    return dict(cfg.items())
+    cfg.read(file, encoding='utf-8')
+    return cfg
 
-def main(argv) -> None:
-    solver = CircularSequenceSchedulingSolver()
+def create_solver() -> CircularSequenceSchedulingSolver:
+    import pathlib
 
+    folder = pathlib.Path(__file__).parent.resolve()
     data = Workshop.get_data().copy()
-    config = dict(read_config('conf.ini')['solver'])
+    config = read_config(f'{folder}/conf.ini')
+    properties = ['type', 'color', 'same']
+
+    solver = CircularSequenceSchedulingSolver(config)
     cap_conf = solver.import_result(
         '~/workspace/data/scheduling0204-19-day.csv'
     )
 
-    properties = ['type', 'color', 'same']
     solver.create_engine(
+        # cyc_len=160,  # when setup_mode == 0
         cyc_len=40,             # 30~50
-        # cyc_len=160,
         cyc_num=3,
         demand=solver.preprocess(
             IDemandFixed(
@@ -295,46 +295,63 @@ def main(argv) -> None:
         # capacity=cap_conf[['same', 'number']].astype(int)
         capacity=None
     )
+    m = config.getint('constraints', 'setup_mode')
+    if m is None:
+        m = 1
+    solver.engine.setup(mode=m)
 
-    solver.engine.setup(mode=1)
-    solver.engine.create_capacity_constraints()
-    solver.engine.create_demand_constraints()
-    solver.engine.create_inventory_constraints()
-    # solver.engine.create_kitting_constraints()
-    # solver.engine.create_circular_capacity_constraint(
-    #     # {1:140, 2:140, 3:140}
-    #     150
-    # )
-    solver.engine.create_changeover_constraints(
-        field_index=properties.index('color'),
-        values=sorted(set(data['color'][:-1]))
-    )
-    solver.engine.create_circular_changeover_constraints(
-        field_index=properties.index('same'),
-        values=sorted(set(data['same'][:-1]))
-    )
+    if config.getboolean('constraints', 'enable_capacity_cons'):
+        solver.engine.create_capacity_constraints()
+    if config.getboolean('constraints', 'enable_demand_cons'):
+        solver.engine.create_demand_constraints()
+    if config.getboolean('constraints', 'enable_inventory_cons'):
+        solver.engine.create_inventory_constraints()
+    if config.getboolean('constraints', 'enable_kitting_cons'):
+        solver.engine.create_kitting_constraints()
+    if config.getboolean('constraints', 'enable_circular_capacity_cons'):
+        solver.engine.create_circular_capacity_constraint(
+            # {1:140, 2:140, 3:140}
+            150
+        )
+    if config.getboolean('constraints', 'enable_changeover_cons'):
+        solver.engine.create_changeover_constraints(
+            field_index=properties.index('color'),
+            values=sorted(set(data['color'][:-1]))
+        )
+    if config.getboolean('constraints', 'enable_circular_changeover_cons'):
+        solver.engine.create_circular_changeover_constraints(
+            field_index=properties.index('same'),
+            values=sorted(set(data['same'][:-1]))
+        )
 
+    objective_weights = dict(config['objective'])
+    for k, v in objective_weights.items():
+        objective_weights[k] = float(v)
     # 目标函数中的各权重为配置项
-    solver.engine.create_objective(
-        {
-            'capacity_changeover': 1,
-            'color_changeover': 0
-        }
-    )
+    if not config.getboolean('constraints', 'CSP'):
+        objective_weights['color_changeover'] = 0
+        solver.engine.create_objective(objective_weights)
 
-    result = solver.engine.run(config=config)
+    return solver
+
+def main(argv) -> None:
+    solver = create_solver()
+
+    solver_conf = dict(solver.config['solver'])
+    for k, v in solver_conf.items():
+        solver_conf[k] = int(v)
+    result = solver.engine.run(config=solver_conf)
 
     times = 1
-    solver.engine.create_objective(
-        {
-            'capacity_changeover': 1,
-            'color_changeover': 1e-1
-        }
-    )
+    objective_weights = dict(solver.config['objective'])
+    for k, v in objective_weights.items():
+        objective_weights[k] = float(v)
     for i in range(times):
+        if not solver.config.getboolean('constraints', 'CSP'):
+            solver.engine.create_objective(objective_weights)
+
         result = solver.engine.run(
-            history=result,
-            config=config
+            history=result, config=solver_conf
         )
 
     solver.display_result()

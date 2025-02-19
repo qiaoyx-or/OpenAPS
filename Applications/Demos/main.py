@@ -12,15 +12,16 @@ from PySide6.QtWidgets import (
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from Modules.WorkshopPlanning import WorkshopPlanning
+from Modules.SolvePannel import SolvePannel
 
 if __name__ == "__main__":
     from qt_material import apply_stylesheet
 
     app = QApplication(sys.argv)
+    # app.setQuitOnLastWindowClosed(False)
     apply_stylesheet(app, theme='dark_teal.xml')
 
-    planning = WorkshopPlanning.create()
+    planning = SolvePannel()
     window = QMainWindow()
     window.setCentralWidget(planning)
     window.setMinimumSize(800, 600)
