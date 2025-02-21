@@ -12,7 +12,6 @@ sys.path.append(
 )
 
 import OptimizationCalculusKernel as GOCK
-from DataSets.Workshop import Workshop
 from Interface.Interface import (
     ICapacity, IDemandFixed
 )
@@ -43,9 +42,7 @@ class CircularSequenceSchedulingSolver:
             2. 整倍数处理以及bias设定, 注: bias 表示整倍数处理后的余量 residue
                正向: num' = ceil(num / pro), bias = num'*pro - num
                还原: num = num' * pro - bias
-            3. 可搭配合并
         """
-
         # 整倍数及余量处理
         for i, row in demand.data.iterrows():
             if row.productivity == 0:
@@ -57,41 +54,33 @@ class CircularSequenceSchedulingSolver:
                 demand.data.loc[i,'number'] = newnum
                 demand.data.loc[i,'bias'] = newnum * row.productivity - oldnum
 
-        # 构造 padding 填充因子
-        type_id = demand.data.type.max() + 1
+        # 构造 padding 填充因子, 注: padding 的值必须保持为最大的唯一值
+        # 此处选择 1e5
+        new_code = demand.data.production_code.max() + 1
         demand.data.loc[len(demand.data.index)] = [
-            demand.data.id.max() + 1,  # id
-            type_id,  # type
-            # 注: padding 的值必须保持为最大的唯一值, 此处选择 1e5
-            # demand.data.color.max() + 1,  # color
-            1e5,                # color
-            1e5, 1, 0,          # 数量(足够大), 产出率, 整倍数余量
-            1e5,                # 产能上限, 此处需要选取一个足够大的值
-            1e5,                # 并行加工标记值, 此处需选取一个唯一值
-            1e5,                # 共用产能标记值, 此处需选取一个唯一值
-            '空载',             # name
-            'EMPTY',            # code
-            'Padding'           # property_1 name / color name
+            new_code,           # production_code
+            'no-load', 1e5,     # production_name, color_code
+            'padding', 1e5, 1,  # color_name, material_code, productivity
+            1e5, 1e5,           # container_cap, sync
+            1e5, 1e5,           # container_type, container_code
+            1e5, 0              # number, bias
         ]
-        demand.production_ids.append(type_id)
+        demand.production_ids.append(new_code)
 
         # 对并行加工(该场景下称为搭配加工)进行合并处理
-        self.recode, droplist = {}, []
+        self.recode = {}
         grp = demand.data.groupby(['sync'])
         for a, g in grp:
-            __key, __ids = a[0], g.id.values
-
-            if __key <= 0:
+            __key, __ids = a[0], g.production_code.values
+            if __key == '':     #  or __key.isna()
                 continue
 
             for e in __ids:
                 if __key not in self.recode:
                     self.recode[__key] = e
                 else:
-                    i = demand.data[demand.data['id']==e].index
-                    # demand.data.loc[i,'bias'] = demand.data.loc[i,'number']
+                    i = demand.data[demand.data['production_code']==e].index
                     demand.data.loc[i,'number'] = 0
-                    # droplist.append(i[0])
 
         return demand
 
@@ -110,7 +99,9 @@ class CircularSequenceSchedulingSolver:
         numbers = [0 for i in range(result.shape[0])]
 
         for i, row in result.iterrows():
-            j = demand.data[demand.data.id == row.id].index
+            j = demand.data[
+                demand.data.production_code == row.production_code
+            ].index
 
             # 还原加工量 num' = num * batch - bias
             # row.number = \
@@ -121,13 +112,13 @@ class CircularSequenceSchedulingSolver:
             numbers[i] = int(
                 row.number * demand.data.loc[j].productivity.values[0] -
                 demand.data.loc[j].bias.values[0])
-            names[i] = demand.data.loc[j].name.values[0]
-            codes[i] = demand.data.loc[j].code.values[0]
-            colors[i] = demand.data.loc[j].property_1.values[0]
+            names[i] = demand.data.loc[j].production_name.values[0]
+            codes[i] = demand.data.loc[j].production_code.values[0]
+            colors[i] = demand.data.loc[j].color_name.values[0]
 
-        result['name'] = names
-        result['code'] = codes
-        result['color'] = colors
+        result['production_name'] = names
+        result['production_code'] = codes
+        result['color_name'] = colors
         result['number'] = numbers
         result['seq'] = [
             i % self.capacity for i in range(result.shape[0])
@@ -197,18 +188,18 @@ class CircularSequenceSchedulingSolver:
             if seq[i] == 0:
                 seq[i] = obj.codes[-1]
             __result.loc[i,:] = self.engine.demand.data[
-                self.engine.demand.data.type == seq[i]
+                self.engine.demand.data.production_code == seq[i]
             ].values[0]
         __result['number'] = [
             np.sum(data[k,:]) for k in range(data.shape[0])
         ]
 
         slices = []
-        df, cyc_len = __result[['same']], obj.cyc_len
+        df, cyc_len = __result[['container_code']], obj.cyc_len
 
         if self.engine.capacity is not None:
             conf = pd.DataFrame(
-                self.engine.capacity.loc[:cyc_len-1, 'same'].values,
+                self.engine.capacity.loc[:cyc_len-1, 'container_code'].values,
                 columns=['cap_conf']
             )
             conf.reset_index(drop=True, inplace=True)
@@ -274,25 +265,31 @@ def create_solver() -> CircularSequenceSchedulingSolver:
     import pathlib
 
     folder = pathlib.Path(__file__).parent.resolve()
-    data = Workshop.get_data().copy()
     config = read_config(f'{folder}/conf.ini')
-    properties = ['type', 'color', 'same']
+    properties = ['production_code', 'color_code', 'container_code']
 
     solver = CircularSequenceSchedulingSolver(config)
-    cap_conf = solver.import_result(
-        '~/workspace/data/scheduling0204-19-day.csv'
+
+    path = f'{folder.parent.parent}/DataSets/InjectionMoldingWorkshop'
+    cap_conf = solver.import_result(f'{path}/FirstShift.csv')
+    base_data = pd.read_csv(f'{path}/BaseData.csv')
+    order = pd.read_csv(f'{path}/SecondShift.csv')
+    raw_data = pd.merge(
+        base_data, order, on='production_code', sort=False
+    )
+    raw_data['bias'] = 0
+    demand=solver.preprocess(
+        IDemandFixed(
+            raw_data.copy(), properties, 'production_code', 'number'
+        )
     )
 
     solver.create_engine(
         # cyc_len=160,  # when setup_mode == 0
         cyc_len=40,             # 30~50
         cyc_num=3,
-        demand=solver.preprocess(
-            IDemandFixed(
-                data, properties, 'type', 'number'
-            )
-        ),
-        # capacity=cap_conf[['same', 'number']].astype(int)
+        demand=demand,
+        # capacity=cap_conf[['container_code', 'number']].astype(int)
         capacity=None
     )
     m = config.getint('constraints', 'setup_mode')
@@ -315,19 +312,20 @@ def create_solver() -> CircularSequenceSchedulingSolver:
         )
     if config.getboolean('constraints', 'enable_changeover_cons'):
         solver.engine.create_changeover_constraints(
-            field_index=properties.index('color'),
-            values=sorted(set(data['color'][:-1]))
+            field_index=properties.index('color_code'),
+            values=sorted(raw_data['color_code'].unique())[:-1]
+
         )
     if config.getboolean('constraints', 'enable_circular_changeover_cons'):
         solver.engine.create_circular_changeover_constraints(
-            field_index=properties.index('same'),
-            values=sorted(set(data['same'][:-1]))
+            field_index=properties.index('container_code'),
+            values=sorted(raw_data['container_code'].unique())[:-1]
         )
 
     objective_weights = dict(config['objective'])
     for k, v in objective_weights.items():
         objective_weights[k] = float(v)
-    # 目标函数中的各权重为配置项
+
     if not config.getboolean('constraints', 'CSP'):
         objective_weights['color_changeover'] = 0
         solver.engine.create_objective(objective_weights)

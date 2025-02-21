@@ -214,7 +214,7 @@ def main(argv) -> None:
     result = solver.engine.run(config=solver_conf)
     solver.export_csv()
 
-    times = 0
+    times = 1
     objective_weights = dict(solver.config['objective'])
     for k, v in objective_weights.items():
         objective_weights[k] = float(v)
