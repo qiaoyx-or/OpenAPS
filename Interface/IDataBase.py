@@ -18,7 +18,7 @@ from sqlalchemy.orm import (
     Mapped,
     mapped_column,
     registry,
-    # relationship,
+    relationship,
     # DeclarativeBase,
     # MappedAsDataclass
 )
@@ -28,7 +28,7 @@ reg = registry()
 
 
 @reg.mapped_as_dataclass(unsafe_hash=True)
-class TimeUnit:
+class Calendar:
     """ 离散时间单元
 
     Attributes:
@@ -45,7 +45,7 @@ class TimeUnit:
             这种情况下，status字段可以去掉. 同时，绑定了人参与决策的过程: 在常规时间内无法完成，如何增加产能
     """
 
-    __tablename__ = "time_unit"
+    __tablename__ = "calendar"
 
     id: Mapped[int] = mapped_column(
         Integer,
@@ -397,10 +397,9 @@ class OrderItem:
 
 
 @reg.mapped_as_dataclass(unsafe_hash=True)
-class WorkCenterDevice:
-    """ 工作中心.设备 """
+class WorkCenterOrgNode:
 
-    __tablename__ = "workcenter_device"
+    __tablename__ = "workcenter_orgnode"
 
     id: Mapped[int] = mapped_column(
         Integer,
@@ -408,24 +407,22 @@ class WorkCenterDevice:
         init=False,
         primary_key=True
     )
-
     name: Mapped[str] = mapped_column(nullable=False)
-    code: Mapped[str] = mapped_column(nullable=True, default='')
-    description: Mapped[str] = mapped_column(nullable=True, default='')
-
-    # Overall Equipment Effectiveness
-    OEE: Mapped[int] = mapped_column(nullable=False, default=100)
-
-    # calendar: Mapped[List[int]]= mapped_column(
-    #     nullable=False, default_factory=list
-    # )
+    code: Mapped[Optional[str]] = mapped_column(default=None)
+    parent_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("workcenter_orgnode.id"), default=None
+    )
+    # Relationship to itself for the hierarchical structure
+    children = relationship(
+        "WorkCenterOrgNode", backref="parent", remote_side=[id]
+    )
 
 
 @reg.mapped_as_dataclass(unsafe_hash=True)
-class WorkCenterCraftRoute:
+class ProcessRoute:
     """ 工作中心.工艺路径
     """
-    __tablename__ = "workcenter_craft_route"
+    __tablename__ = "process_route"
 
     id: Mapped[int] = mapped_column(
         Integer,
@@ -447,18 +444,17 @@ class WorkCenterCraftRoute:
 
 
 @reg.mapped_as_dataclass(unsafe_hash=True)
-class CraftRouteItem:
-    """ 工序: 由工艺、设备构成的关系. flowshop中通常不需要处理这一级, 多用于jobshop
+class ProcessRouteItem:
+    """ 工序: 由工艺、设备构成的关系
 
     Attributes:
         id: 数据库表索引
-        craft: 所属工艺路径
-        device: 对应的设备(用于jobshop), 与line二选一，不同时生效
-        line: 对应的产线(用于flowshop)
+        process: 所属工艺路径
+        workcenter: 对应的产线(用于flowshop)
         seq_no: 表示该job在所属工艺路径中的工序
         buff: 对应缓存区的容量[可选]
     """
-    __tablename__ = "craft_route_item"
+    __tablename__ = "process_route_item"
 
     id: Mapped[int] = mapped_column(
         Integer,
@@ -467,15 +463,11 @@ class CraftRouteItem:
         primary_key=True
     )
 
-    craft: Mapped[int] = mapped_column(
-        ForeignKey("workcenter_craft_route.id")
+    process: Mapped[int] = mapped_column(
+        ForeignKey("process_route.id")
     )
-    device: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("workcenter_device.id"),
-        default=None
-    )
-    line: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("workcenter_org_line.id"),
+    workcenter: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("workcenter_orgnode.id"),
         default=None
     )
 
@@ -485,102 +477,15 @@ class CraftRouteItem:
     buff: Mapped[int] = mapped_column(default=0)
 
 
-""" 默认5级组织结构： 集团 -> 工厂 -> 车间 -> 产线 -> 班组
-"""
-@reg.mapped_as_dataclass(unsafe_hash=True)
-class WorkCenterOrg_Group:
-    """ 产能组织结构.集团 """
-
-    __tablename__ = "workcenter_org_group"
-
-    id: Mapped[int] = mapped_column(
-        Integer,
-        Identity(),
-        init=False,
-        primary_key=True
-    )
-
-    name: Mapped[str] = mapped_column(nullable=False)
-    code: Mapped[Optional[str]] = mapped_column(default=None)
-
-
-@reg.mapped_as_dataclass(unsafe_hash=True)
-class WorkCenterOrg_Factory:
-    """ 产能组织结构.工厂 """
-
-    __tablename__ = "workcenter_org_factory"
-
-    id: Mapped[int] = mapped_column(
-        Integer,
-        Identity(),
-        init=False,
-        primary_key=True
-    )
-
-    name: Mapped[str] = mapped_column(nullable=False)
-    code: Mapped[Optional[int]] = mapped_column(default=None)
-
-
-@reg.mapped_as_dataclass(unsafe_hash=True)
-class WorkCenterOrg_workshop:
-    """ 产能组织结构.车间 """
-
-    __tablename__ = "workcenter_org_workshop"
-
-    id: Mapped[int] = mapped_column(
-        Integer,
-        Identity(),
-        init=False,
-        primary_key=True
-    )
-
-    name: Mapped[str] = mapped_column(nullable=False)
-    code: Mapped[Optional[str]] = mapped_column(default=None)
-
-
-@reg.mapped_as_dataclass(unsafe_hash=True)
-class WorkCenterOrg_Line:
-    """ 产能组织结构.产线 """
-
-    __tablename__ = "workcenter_org_line"
-
-    id: Mapped[int] = mapped_column(
-        Integer,
-        Identity(),
-        init=False,
-        primary_key=True
-    )
-
-    name: Mapped[str] = mapped_column(nullable=False)
-    code: Mapped[Optional[str]] = mapped_column(default=None)
-
-
-@reg.mapped_as_dataclass(unsafe_hash=True)
-class WorkCenterOrg_Team:
-    """ 产能组织结构.班组 """
-
-    __tablename__ = "workcenter_org_team"
-
-    id: Mapped[int] = mapped_column(
-        Integer,
-        Identity(),
-        init=False,
-        primary_key=True
-    )
-
-    name: Mapped[str] = mapped_column(nullable=False)
-    code: Mapped[Optional[str]] = mapped_column(default=None)
-
-
 @reg.mapped_as_dataclass(unsafe_hash=True)
 class ProcessItem:
-    """ 定义一个具体的加工(job): 什么production在那个craft(所包含的workcenters)上
-        进行加工的基础信息
+    """ 定义一个具体的加工(job): 什么production在那个process(所包含的workcenters)上
+        进行加工的基础信息(用于表示production与工艺路径的多对多关系)
 
     Attributes:
         id: 数据库表索引
-        prod: 该加工对应的制品信息
-        craft: 该加工所属的工艺路径
+        production: 该加工对应的制品信息
+        process: 该加工所属的工艺路径
         productivity: 一次加工的出件率，如: 一次冲压可以出多个零件
         processing_time: 一次加工需要花费的时间(秒)。生产节拍需要转化为加工时长
         sync: 并行加工标识。sync值相同的jobs，表示它们并行加工
@@ -594,13 +499,13 @@ class ProcessItem:
         primary_key=True
     )
 
-    prod: Mapped[int] = mapped_column(
+    production: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("production.id")
     )
-    craft: Mapped[int] = mapped_column(
+    process: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("workcenter_craft_route.id")
+        ForeignKey("process_route.id")
     )
 
     # 单次加工的出件数量
@@ -671,7 +576,7 @@ class Ingredient:
 
 @reg.mapped_as_dataclass(unsafe_hash=True)
 class KittingInformation:
-    """ 齐套信息: 在 time_unit 代表的时间, material 已备好的数量 number
+    """ 齐套信息: 在 calendar 代表的时间, material 已备好的数量 number
 
     Attributes:
         id: 数据库表索引
@@ -686,9 +591,9 @@ class KittingInformation:
         primary_key=True
     )
 
-    time_unit: Mapped[int] = mapped_column(
+    calendar: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("time_unit.id")
+        ForeignKey("calendar.id")
     )
     material: Mapped[int] = mapped_column(
         Integer,
@@ -701,14 +606,14 @@ class KittingInformation:
 
 
 @reg.mapped_as_dataclass(unsafe_hash=True)
-class LocalTimeUnit:
-    """ 局部离散时间，如果与全局 TimeUnit 重叠，则使用局部覆盖全局数据
+class LocalCalendar:
+    """ 局部离散时间，如果与全局 Calendar 重叠，则使用局部覆盖全局数据
 
     Attributes:
         id: 数据库表索引
 
     """
-    __tablename__ = "local_time_unit"
+    __tablename__ = "local_calendar"
 
     id: Mapped[int] = mapped_column(
         Integer,
@@ -717,21 +622,17 @@ class LocalTimeUnit:
         primary_key=True
     )
 
-    time_unit: Mapped[int] = mapped_column(
+    calendar: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("time_unit.id")
+        ForeignKey("calendar.id")
     )
     scale: Mapped[int] = mapped_column(default=8*60*60)
     status: Mapped[int] = mapped_column(default=1)
     used: Mapped[float] = mapped_column(default=0.)
 
     # 如果设备或产线的生产日历与全局生产日历不一致，则设置对应设备或产线的可用情况
-    device: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("workcenter_device.id"),
-        default=None
-    )
-    line: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("workcenter_org_line.id"),
+    workcenter: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("workcenter_orgnode.id"),
         default=None
     )
 
@@ -753,9 +654,9 @@ class PlanningResult:
         primary_key=True
     )
 
-    time_unit: Mapped[int] = mapped_column(
+    calendar: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("time_unit.id")
+        ForeignKey("calendar.id")
     )
     production: Mapped[int] = mapped_column(
         Integer,
@@ -765,12 +666,9 @@ class PlanningResult:
     number: Mapped[int] = mapped_column(
         Integer, default=0
     )
-    device: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("workcenter_device.id"),
-        default=None
-    )
-    line: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("workcenter_org_line.id"),
+
+    workcenter: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("workcenter_orgnode.id"),
         default=None
     )
 
@@ -803,10 +701,10 @@ class ConstraintChangeOver:
     )
 
     curr: Mapped[int] = mapped_column(
-        ForeignKey("craft_route_item.id")
+        ForeignKey("process_route_item.id")
     )
     next: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("craft_route_item.id")
+        ForeignKey("process_route_item.id")
     )
 
     change_time: Mapped[float] = mapped_column(default=0.0)

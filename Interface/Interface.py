@@ -291,14 +291,14 @@ class ICapacity:
 
     @property
     def production_ids(self):
-        return list(set(self.data['prod']))
+        return list(set(self.data['production']))
 
     def syncs(self, ids=None):
         id_list = ids
         if not ids:
             id_list = self.production_ids
         selected = [
-            self.data[self.data['prod'] == p] for p in id_list
+            self.data[self.data['production'] == p] for p in id_list
         ]
 
         return np.array(
@@ -310,7 +310,7 @@ class ICapacity:
         if not ids:
             id_list = self.production_ids
         selected = [
-            self.data[self.data['prod'] == p] for p in id_list
+            self.data[self.data['production'] == p] for p in id_list
         ]
 
         return np.array(
@@ -322,7 +322,7 @@ class ICapacity:
         if not ids:
             id_list = self.production_ids
         selected = [
-            self.data[self.data['prod'] == p] for p in id_list
+            self.data[self.data['production'] == p] for p in id_list
         ]
 
         return np.array(
@@ -334,7 +334,7 @@ class ICapacity:
         if not ids:
             id_list = self.production_ids
         # selected = [
-        #     self.data[self.data['prod'] == p] for p in id_list
+        #     self.data[self.data['production'] == p] for p in id_list
         # ]
 
         # return np.array(
@@ -351,7 +351,7 @@ class ICapacity:
         _len = len(id_list)
 
         selected = [
-            self.data[self.data['prod'] == p] for p in id_list
+            self.data[self.data['production'] == p] for p in id_list
         ]
 
         oees = np.array(
@@ -366,8 +366,8 @@ class ICapacity:
                 durations[i] = durations[i] * 100 / oees[i]
 
         # just for testing!
-        durations.fill(1.8)
-        # durations.fill(1.)
+        # durations.fill(1.8)
+        durations.fill(1.2)
         # end testing
 
         return durations
@@ -420,7 +420,7 @@ class KittingProcess:
             matA[i,j] = row.number
 
         for index, row in kitting_information.iterrows():
-            i = tidx[row.time_unit]
+            i = tidx[row.calendar]
             j = midx[row.material]
 
             matB[i,j] += row.number
@@ -437,16 +437,10 @@ class Preprocessing:
     def __init__(
             self,
             demand: IDemandTimed,
-            capacity: pd.DataFrame,
-            workcenter: List[str]
+            capacity: pd.DataFrame
     ) -> None:
         self.demand = demand
-
-        join = set(workcenter) & set(capacity.columns)
-        self.line_groups = capacity.groupby(
-            list(join),
-            as_index=False
-        )
+        self.line_groups = capacity.groupby(['workcenter'], as_index=False)
 
     def get_capacity_list(
             self,
@@ -469,11 +463,9 @@ class Preprocessing:
         )
 
         for _, capacity in self.line_groups:
-            _products = list(set(capacity['prod']))
-
             syncs = capacity.groupby(['sync'])
             for s in syncs:
-                _prods = list(s[1]['prod'])
+                _prods = list(s[1]['production'])
                 if len(_prods) <= 1:
                     continue
 
@@ -525,7 +517,7 @@ class Preprocessing:
             res = quantity[i] % fix_batch_sizes[i]
             if res == 0:
                 continue
-            if res * 2 >= snp[i]:
+            if res * 2 >= self.snp[i]:
                 supplements[i] = fix_batch_sizes[i] - res
             else:
                 supplements[i] = -res

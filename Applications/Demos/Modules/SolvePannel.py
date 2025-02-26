@@ -35,9 +35,11 @@ class SolvePannel(QWidget):
         self.ui.statusLabel.setText('')
         self.ui.startBtn.setEnabled(True)
         self.ui.stopBtn.setEnabled(False)
+        self.ui.workcenters.currentIndexChanged.connect(self.change_result)
+
         self.ui.startBtn.clicked.connect(self.on_start)
         self.ui.stopBtn.clicked.connect(self.on_stop)
-        self.ui.workcenters.currentIndexChanged.connect(self.change_result)
+        self.ui.tabWidget.currentChanged.connect(self.on_tab_changed)
 
     def read_data(self) -> None:
         folder = pathlib.Path(__file__).parent.resolve()
@@ -49,6 +51,8 @@ class SolvePannel(QWidget):
         for f in files:
             fn, _ = os.path.splitext(os.path.basename(f))
             self.ui.workcenters.addItem(fn)
+
+        self.ui.workcenters.setMinimumWidth(200)
         self.ui.workcenters.adjustSize()
 
         self.ui.workcenters.setCurrentIndex(0)
@@ -59,6 +63,12 @@ class SolvePannel(QWidget):
 
     def change_result(self, index) -> None:
         self.ui.resultView.setModel(PandasModel(self.results[index]))
+
+    def on_tab_changed(self, index):
+        if index == 2:
+            self.ui.workcenters.show()
+        else:
+            self.ui.workcenters.hide()
 
     def on_start(self) -> None:
         if self.process is None:

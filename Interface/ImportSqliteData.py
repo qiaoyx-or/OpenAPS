@@ -14,13 +14,13 @@ from IDataBase import (
     Material,
     Ingredient,
     KittingInformation,
-    TimeUnit,
-    # WorkCenterOrg_Line,
+    Calendar,
+    WorkCenterOrgNode,
     Property_1,
     Property_2,
     Production,
-    WorkCenterCraftRoute,
-    CraftRouteItem,
+    ProcessRoute,
+    ProcessRouteItem,
     ProcessItem,
     OrderInformation,
     OrderItem
@@ -56,10 +56,10 @@ def import_base_data(
             create_engine(f'sqlite:///{dbfile}?charset=utf8')
     ) as session:
         # 生产日历
-        units = pd.DataFrame(session.query(TimeUnit))
+        calendar = pd.DataFrame(session.query(Calendar))
 
         # 产线信息，生产序列生成的地方(生产序列的坐标系)
-        # lines = pd.DataFrame(session.query(WorkCenterOrg_Line))
+        workcenters = pd.DataFrame(session.query(WorkCenterOrgNode))
 
         # 容器容量
         container_sizes = pd.DataFrame(session.query(Property_1))
@@ -71,10 +71,10 @@ def import_base_data(
         prods = pd.DataFrame(session.query(Production))
 
         # 工艺路径基本信息
-        crafts = pd.DataFrame(session.query(WorkCenterCraftRoute))
+        processes = pd.DataFrame(session.query(ProcessRoute))
 
         # 工艺路径与设备或产线的对应关系(many2many)
-        routes = pd.DataFrame(session.query(CraftRouteItem))
+        routes = pd.DataFrame(session.query(ProcessRouteItem))
 
         # 制品与工艺路径的对应关系(many2many)
         route_items = pd.DataFrame(session.query(ProcessItem))
@@ -150,31 +150,31 @@ def import_base_data(
             validate=None,
         )
 
-        craft = pd.merge(
-            crafts,
+        process = pd.merge(
+            processes,
             routes,
             how="inner",
             on=None,
             left_on="id",
-            right_on="craft",
+            right_on="process",
             left_index=False,
             right_index=False,
             sort=False,
-            suffixes=("_craft", "_route"),
+            suffixes=("_process", "_route"),
             copy=False,
             # indicator=True,
-                indicator=False,
+            indicator=False,
             validate=None,
         )
 
-        craft = pd.merge(
+        process = pd.merge(
             route_items,
-            craft,
+            process,
             how="inner",
-            on="craft",
-            # left_on="craft",
+            on="process",
+            # left_on="process",
             # right_on="id",
-                left_index=False,
+            left_index=False,
             right_index=False,
             sort=False,
             suffixes=("_route_item", ""),
@@ -184,4 +184,20 @@ def import_base_data(
             validate=None,
         )
 
-    return units, order, craft
+        process = pd.merge(
+            process,
+            workcenters,
+            how="inner",
+            left_on="workcenter",
+            right_on="id",
+            left_index=False,
+            right_index=False,
+            sort=False,
+            suffixes=("_route_item", ""),
+            copy=False,
+            # indicator=True,
+                indicator=False,
+            validate=None,
+        )
+
+    return calendar, order, process

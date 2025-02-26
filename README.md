@@ -1,5 +1,5 @@
 
-![PlanningSystem](Docs/images/planning_system.png)
+![计划体系](Docs/images/planning_system.png)
 
 # en [English](README.en.md)
 
@@ -26,6 +26,8 @@ OpenAPS是针对当前APS在应用和实施过程中面临的以下问题制定�
 
 ## 整体方案
 全局协同 & 决策优化
+
+![计划体系的协同方案](Docs/images/collaboration_approach.png)
 
 ## 应用场景
 <ol>

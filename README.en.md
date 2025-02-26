@@ -35,6 +35,8 @@ The optimization process lacks sufficient human-computer interaction, causing di
 ## Overall Solution
 Global Collaboration and Decision Optimization
 
+![计划体系的协同方案](Docs/images/collaboration_approach.png)
+
 ## Application Scenarios:
 <ol>
     <li>Planning</li>

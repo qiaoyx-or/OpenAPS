@@ -45,8 +45,11 @@ class WorkshopSolver:
     ) -> None:
         process = Preprocessing(
             IDemandTimed(
-                order, self.calendar, ['production'], 'production', 'number'
-            ), craft, ['line']
+                order, self.calendar, ['production'],
+                'production',
+                'number'
+            ),
+            craft
         )
         process.demand.fixed_batch_size = process.demand.snps() * 2**0
         process.demand.supplements += process.check_fixed_batch_size()
@@ -59,14 +62,49 @@ class WorkshopSolver:
 
     def export_csv(self) -> None:
         import pathlib
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import Session
+        from Interface.IDataBase import Production
+
         folder = pathlib.Path(__file__).parent.resolve()
-        pd.DataFrame(self.engine.business.data.demand).to_csv(
-            f'{folder}/demand.csv'
+        dbfile = f'{folder}/{self.config['dbfile']['file']}'
+
+        names = {}
+        with Session(
+                create_engine(f'sqlite:///{dbfile}?charset=utf8')
+        ) as session:
+            Productions = pd.DataFrame(session.query(Production))
+            session.commit()
+            for _, row in Productions.iterrows():
+                names[row['id']] = row['name']
+
+        business = self.engine.business
+        columns = {}
+        codes = business.scene.form.codes
+        columns[0] = [names[c] for c in codes]
+        for wc in business.scene.workcenters:
+            codes = wc.form.codes
+            columns[wc.code] = [names[c] for c in codes]
+
+        folder = pathlib.Path(__file__).parent.resolve()
+
+        indexes = [f'第{i+1}班' for i in range(
+            self.engine.demand.calendar.length()
+        )]
+        df = pd.DataFrame(
+            self.engine.demand.quantity,
+            # index=indexes,
+            columns=[names[i] for i in self.engine.demand.production_ids]
         )
-        for k, v in self.engine.business.data.result.items():
-            pd.DataFrame(v).to_csv(
-                f'{folder}/workcenter_{k}.csv'
-            )
+        df.loc[len(df.index)]=self.engine.demand.quantity_acc[-1,:]
+        indexes.append('合计')
+        df.index=indexes
+        df.to_csv(f'{folder}/demand.csv')
+
+        for k, v in business.data.result.items():
+            indexes = [f'第{i+1}班' for i in range(v.shape[0])]
+            df = pd.DataFrame(v, index=indexes, columns=columns[k])
+            df.to_csv(f'{folder}/workcenter_{k}.csv')
 
     def store_result(self, file: str, result) -> None:
         records = self.engine.get_result(result)
@@ -226,8 +264,8 @@ def main(argv) -> None:
             history=result, config=solver_conf
         )
 
-    # solver.display_result(mode=1)
     solver.export_csv()
+    # solver.display_result(mode=1)
 
 
 if __name__ == '__main__':
