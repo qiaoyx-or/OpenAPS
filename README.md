@@ -60,3 +60,9 @@ OpenAPS是针对当前APS在应用和实施过程中面临的以下问题制定�
 | 2 | DataSets                   | 公共数据集                               |
 | 3 | Interface                  | 数据接口                                 |
 | 4 | Optimizationcalculuskernel | 优化运算核，提供规划所需的数学模型与算法 |
+
+## 关于 GOCK
+
+GOCK is a Mathematical Programming and Constraint Solving Tools for Industrial software
+
+![gock](Docs/images/gock.png)

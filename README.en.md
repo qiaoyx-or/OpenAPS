@@ -68,3 +68,8 @@ Global Collaboration and Decision Optimization
 | 3 | Interface                  | Data interfaces.                                        |
 | 4 | OptimizationCalculusKernel | mathematical models and algorithms needed for planning. |
 
+## about GOCK
+
+GOCK is a Mathematical Programming and Constraint Solving Tools for Industrial software
+
+![gock](Docs/images/gock.png)

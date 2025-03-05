@@ -1,0 +1,11 @@
+absl_py==2.1.0
+numpy==2.2.3
+pandas==2.2.3
+pandasgui==0.2.14
+PySide6==6.8.2.1
+PySide6==6.8.2.1
+PySide6_Addons==6.8.2.1
+PySide6_Essentials==6.8.2.1
+PySide6_Examples==6.8.2.1
+qt_material==2.14
+SQLAlchemy==2.0.31
