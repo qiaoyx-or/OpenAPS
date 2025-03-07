@@ -2,6 +2,7 @@
 ![PlanningSystem](Docs/images/planning_system.png)
 
 # zh_CN [简体中文](README.md)
+# [Project Document](Docs/OpenAPS.pdf)
 
 # What's APS
 APS (Advanced Planning and Scheduling) is a system used to optimize and manage complex operational processes in manufacturing, logistics, and other industries. It aims to generate efficient, feasible plans and schedules by considering multiple factors and constraints, thereby improving operational efficiency and resource utilization.
@@ -9,7 +10,14 @@ APS (Advanced Planning and Scheduling) is a system used to optimize and manage c
 # OpenAPS
 
 ## Project Objective
-To provide an efficient tool for scientific decision-making in production scenarios.
+
+<ol>
+    <li>Promote the widespread adoption of APS</li>
+    <li>Provide efficient tools to help enterprises make scientific decisions in production scenarios</li>
+    <li>Break the complexity of traditional APS system implementation—ready to use after data configuration</li>
+    <li>Combine specialized mathematical models and constraint solving for reliable optimization</li> <li>Explore best practices of APS</li>
+    <li>Provide reference and learning resources</li>
+</ol>
 
 ## Project Features
 Represent actual planning/decision problems through constraint optimization mathematical models.
