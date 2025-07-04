@@ -34,7 +34,7 @@ class TimeLine:
 
     def index(self, dt: datetime) -> int:
         _dt = max(dt, self.units[0].time)
-        _dt = min(dt, self.units[-1].time)
+        _dt = min(_dt, self.units[-1].time)
         for i in range(self.length()):
             if _dt.day == self.units[i].time.day:
                 return i

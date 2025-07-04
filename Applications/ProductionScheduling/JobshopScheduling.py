@@ -19,6 +19,10 @@ from Interface.Interface import (
 
 
 class JobshopSchedulingSolver:
+    """ 当前状态: 模型已完成，应用待实现
+        纯Jobshop场景对APS的需求不高，实现的价值低
+        研发暂时搁置!
+    """
 
     def __init__(self) -> None:
         pass
@@ -48,19 +52,6 @@ def main(argv) -> None:
 
     base_data = pd.read_csv(f'{path}/BaseDataS.csv')
     order = pd.read_csv(f'{path}/OrderData.csv')
-
-    # grouped = base_data.groupby('product', as_index=False)
-    # processes = []
-    # for g in grouped:
-    #     process = g[1].sort_values(by='process', inplace=False)
-    #     j = 1
-    #     for i, row in process.iterrows():
-    #         process.loc[i,'process'] = j
-    #         j = j + 1
-
-    #     processes.append(process)
-
-    # new = pd.concat(processes)
 
     from pandasgui import show
     show(base_data, order)

@@ -204,12 +204,12 @@ def create_solver() -> WorkshopSolver:
     for k, v in objective_weights.items():
         objective_weights[k] = float(v)
 
-    units, order, craft = import_base_data(database)
+    time_units, order, craft = import_base_data(database)
     # records = import_planning_result(database)
     material, ingredient, kitting = import_kitting_information(database)
 
     # 必选项: 基础配置
-    solver.create_calendar(units)
+    solver.create_calendar(time_units)  # 构建生产日历
     solver.create_engine(order, craft)
     solver.engine.setup()
     matA, matB = KittingProcess.to_kitting_condition(

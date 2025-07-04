@@ -314,7 +314,6 @@ def create_solver() -> CircularSequenceSchedulingSolver:
         solver.engine.create_changeover_constraints(
             field_index=properties.index('color_code'),
             values=sorted(raw_data['color_code'].unique())[:-1]
-
         )
     if config.getboolean('constraints', 'enable_circular_changeover_cons'):
         solver.engine.create_circular_changeover_constraints(
@@ -334,6 +333,10 @@ def create_solver() -> CircularSequenceSchedulingSolver:
 
 def main(argv) -> None:
     solver = create_solver()
+
+    # just for testing
+    # return
+    # end testing
 
     solver_conf = dict(solver.config['solver'])
     for k, v in solver_conf.items():
