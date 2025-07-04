@@ -64,15 +64,25 @@ Global Collaboration and Decision Optimization
 </ol>
 
 ## Getting started
-    When you first clone the repository you'll need to update the submodules:
+
+### When you first clone the repository you'll need to update the submodules:
+
     ```
     git submodule update --init --recursive
     ```
 
-    Then update all submodules
+### Then update all submodules
+
     ```
     git submodule update --recursive --remote
     ```
+
+### Install Packages Using requirements.txt
+
+    ```
+    pip install -r requirements.txt
+    ```
+
 ## Project Structure
 |   | Submodule                  | Description                                             |
 |:--|:---------------------------|:--------------------------------------------------------|
@@ -80,6 +90,14 @@ Global Collaboration and Decision Optimization
 | 2 | DataSets                   | Public data sets.                                       |
 | 3 | Interface                  | Data interfaces.                                        |
 | 4 | OptimizationCalculusKernel | mathematical models and algorithms needed for planning. |
+
+### Demos
+
+    ```
+    python3 Applications/ProductionPlanning/Workshop.py
+    python3 Applications/ProductionScheduling/CircularSequence.py
+    python3 Applications/Demos/main.py
+    ```
 
 ## about GOCK
 

@@ -57,22 +57,38 @@ OpenAPS是针对当前APS在应用和实施过程中面临的以下问题制定�
 </ol>
 
 ## Getting started
-    第一次克隆该仓库时，需要更新子模块：
+
+### 第一次克隆该仓库时，需要更新子模块：
     ```
     git submodule update --init --recursive
     ```
-    更新所有子模块
+
+### 更新所有子模块
     ```
     git submodule update --recursive --remote
     ```
 
+### 安装依赖包
+    ```
+    pip install -r requirements.txt
+    ```
+
 ## 项目结构
+
 |   | 子模块                     | 描述                                     |
 |:--|:---------------------------|:-----------------------------------------|
 | 1 | Application                | 各类场景及应用                           |
 | 2 | DataSets                   | 公共数据集                               |
 | 3 | Interface                  | 数据接口                                 |
 | 4 | Optimizationcalculuskernel | 优化运算核，提供规划所需的数学模型与算法 |
+
+### Demos
+
+    ```
+    python3 Applications/ProductionPlanning/Workshop.py
+    python3 Applications/ProductionScheduling/CircularSequence.py
+    python3 Applications/Demos/main.py
+    ```
 
 ## 关于 GOCK
 
