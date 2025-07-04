@@ -61,6 +61,10 @@ OpenAPS是针对当前APS在应用和实施过程中面临的以下问题制定�
     ```
     git submodule update --init --recursive
     ```
+    更新所有子模块
+    ```
+    git submodule update --recursive --remote
+    ```
 
 ## 项目结构
 |   | 子模块                     | 描述                                     |

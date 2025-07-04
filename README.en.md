@@ -68,6 +68,11 @@ Global Collaboration and Decision Optimization
     ```
     git submodule update --init --recursive
     ```
+
+    Then update all submodules
+    ```
+    git submodule update --recursive --remote
+    ```
 ## Project Structure
 |   | Submodule                  | Description                                             |
 |:--|:---------------------------|:--------------------------------------------------------|
